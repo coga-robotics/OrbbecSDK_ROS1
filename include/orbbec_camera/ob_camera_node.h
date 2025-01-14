@@ -432,8 +432,8 @@ class OBCameraNode {
   int ir_gain_ = -1;
   int ir_ae_max_exposure_ = -1;
   bool enable_ir_long_exposure_ = false;
-  int soft_filter_max_diff_ = -1;
-  int soft_filter_speckle_size_ = -1;
+  int soft_filter_max_diff_ = 6;
+  int soft_filter_speckle_size_ = 480;
   std::string depth_filter_config_;
   bool enable_depth_filter_ = false;
 
