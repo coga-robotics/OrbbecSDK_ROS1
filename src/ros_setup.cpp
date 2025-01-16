@@ -846,6 +846,7 @@ void OBCameraNode::setupDiagnosticUpdater() {
   diagnostic_updater_->add("Temperature", this, &OBCameraNode::diagnosticTemperature);
   while (is_running_ && ros::ok()) {
     diagnostic_updater_->force_update();
+    std::cout<< "NOISE_KENSLING PROVIDED BY ORBBEC" << std::endl;
     rate.sleep();
   }
 }
