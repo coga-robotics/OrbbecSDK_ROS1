@@ -303,18 +303,13 @@ void OBCameraNode::setupDevices() {
       device_->setStructuredData(OB_STRUCT_DEPTH_AE_ROI, &roi, sizeof(AE_ROI));
     }
     if (device_->isPropertySupported(OB_PROP_DEPTH_MAX_DIFF_INT, OB_PERMISSION_WRITE)) {
-      device_->setIntProperty(OB_PROP_DEPTH_MAX_DIFF_INT, 6);
-      std::cout << "support OB_PROP_DEPTH_MAX_DIFF_INT WRITE" << std::endl;
-      // auto default_soft_filter_max_diff = device_->getIntProperty(OB_PROP_DEPTH_MAX_DIFF_INT);
-      // ROS_INFO_STREAM("default_soft_filter_max_diff: " << default_soft_filter_max_diff);
-      // if (soft_filter_max_diff_ != -1 && default_soft_filter_max_diff != soft_filter_max_diff_) {
-      //   device_->setIntProperty(OB_PROP_DEPTH_MAX_DIFF_INT, soft_filter_max_diff_);
-      //   auto new_soft_filter_max_diff = device_->getIntProperty(OB_PROP_DEPTH_MAX_DIFF_INT);
-      //   ROS_INFO_STREAM("after set soft_filter_max_diff: " << new_soft_filter_max_diff);
-      // }
-    }
-    else {
-        std::cout << "do not support OB_PROP_DEPTH_MAX_DIFF_INT WRITE" << std::endl;
+      auto default_soft_filter_max_diff = device_->getIntProperty(OB_PROP_DEPTH_MAX_DIFF_INT);
+      ROS_INFO_STREAM("default_soft_filter_max_diff: " << default_soft_filter_max_diff);
+      if (soft_filter_max_diff_ != -1 && default_soft_filter_max_diff != soft_filter_max_diff_) {
+        device_->setIntProperty(OB_PROP_DEPTH_MAX_DIFF_INT, soft_filter_max_diff_);
+        auto new_soft_filter_max_diff = device_->getIntProperty(OB_PROP_DEPTH_MAX_DIFF_INT);
+        ROS_INFO_STREAM("after set soft_filter_max_diff: " << new_soft_filter_max_diff);
+      }
     }
     if (!depth_work_mode_.empty()) {
       ROS_INFO_STREAM("Set depth work mode: " << depth_work_mode_);
@@ -337,21 +332,16 @@ void OBCameraNode::setupDevices() {
       device_->setBoolProperty(OB_PROP_LDP_BOOL, enable_ldp_);
     }
     if (device_->isPropertySupported(OB_PROP_DEPTH_MAX_SPECKLE_SIZE_INT, OB_PERMISSION_WRITE)) {
-      // auto default_soft_filter_speckle_size =
-      //     device_->getIntProperty(OB_PROP_DEPTH_MAX_SPECKLE_SIZE_INT);
-      // if (soft_filter_speckle_size_ != -1 &&
-      //     default_soft_filter_speckle_size != soft_filter_speckle_size_) {
-      //   ROS_INFO_STREAM("default_soft_filter_speckle_size: " << default_soft_filter_speckle_size);
-      //   device_->setIntProperty(OB_PROP_DEPTH_MAX_SPECKLE_SIZE_INT, soft_filter_speckle_size_);
-      //   auto new_soft_filter_speckle_size =
-      //       device_->getIntProperty(OB_PROP_DEPTH_MAX_SPECKLE_SIZE_INT);
-      //   ROS_INFO_STREAM("after set soft_filter_speckle_size: " << new_soft_filter_speckle_size);
-      // }
-      device_->setIntProperty(OB_PROP_DEPTH_MAX_SPECKLE_SIZE_INT, 480);
-      std::cout << "support OB_PROP_DEPTH_MAX_SPECKLE_SIZE_INT WRITE" << std::endl;
-    }
-    else {
-        std::cout << "do not support OB_PROP_DEPTH_MAX_SPECKLE_SIZE_INT WRITE" << std::endl;
+      auto default_soft_filter_speckle_size =
+          device_->getIntProperty(OB_PROP_DEPTH_MAX_SPECKLE_SIZE_INT);
+      if (soft_filter_speckle_size_ != -1 &&
+          default_soft_filter_speckle_size != soft_filter_speckle_size_) {
+        ROS_INFO_STREAM("default_soft_filter_speckle_size: " << default_soft_filter_speckle_size);
+        device_->setIntProperty(OB_PROP_DEPTH_MAX_SPECKLE_SIZE_INT, soft_filter_speckle_size_);
+        auto new_soft_filter_speckle_size =
+            device_->getIntProperty(OB_PROP_DEPTH_MAX_SPECKLE_SIZE_INT);
+        ROS_INFO_STREAM("after set soft_filter_speckle_size: " << new_soft_filter_speckle_size);
+      }
     }
     if (device_->isPropertySupported(OB_PROP_HEARTBEAT_BOOL, OB_PERMISSION_READ_WRITE)) {
       ROS_INFO_STREAM("Setting heartbeat to " << (enable_heartbeat_ ? "true" : "false"));
