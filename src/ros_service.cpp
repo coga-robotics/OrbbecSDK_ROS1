@@ -221,6 +221,12 @@ void OBCameraNode::setupCameraCtrlServices() {
         response.success = this->getLdpMeasureDistanceCallback(request, response);
         return response.success;
       });
+  get_laser_status_srv_ = nh_.advertiseService<GetBoolRequest, GetBoolResponse>(
+      "/" + camera_name_ + "/" + "get_laser_status",
+      [this](GetBoolRequest& request, GetBoolResponse& response) {
+        response.success = this->getLaserStatusCallback(request, response);
+        return response.success;
+      });
 }
 
 bool OBCameraNode::setMirrorCallback(std_srvs::SetBoolRequest& request,
@@ -467,7 +473,11 @@ bool OBCameraNode::setLaserCallback(std_srvs::SetBoolRequest& request,
   std::lock_guard<decltype(device_lock_)> lock(device_lock_);
   try {
     int data = request.data ? 1 : 0;
-    device_->setIntProperty(OB_PROP_LASER_CONTROL_INT, data);
+    if (device_->isPropertySupported(OB_PROP_LASER_CONTROL_INT, OB_PERMISSION_READ_WRITE)) {
+      device_->setIntProperty(OB_PROP_LASER_CONTROL_INT, data);
+    } else if (device_->isPropertySupported(OB_PROP_LASER_BOOL, OB_PERMISSION_READ_WRITE)) {
+      device_->setBoolProperty(OB_PROP_LASER_BOOL, data);
+    }
   } catch (const ob::Error& e) {
     ROS_ERROR_STREAM("Failed to set laser: " << e.getMessage());
     response.message = e.getMessage();
@@ -480,8 +490,22 @@ bool OBCameraNode::setLdpEnableCallback(std_srvs::SetBoolRequest& request,
                                         std_srvs::SetBoolResponse& response) {
   (void)response;
   std::lock_guard<decltype(device_lock_)> lock(device_lock_);
+  bool ldp_enable = request.data;
   try {
-    device_->setBoolProperty(OB_PROP_LDP_BOOL, request.data);
+    if (device_->isPropertySupported(OB_PROP_LASER_CONTROL_INT, OB_PERMISSION_READ_WRITE)) {
+      auto laser_enable = device_->getIntProperty(OB_PROP_LASER_CONTROL_INT);
+      device_->setBoolProperty(OB_PROP_LDP_BOOL, ldp_enable);
+      device_->setIntProperty(OB_PROP_LASER_CONTROL_INT, laser_enable);
+    } else if (device_->isPropertySupported(OB_PROP_LASER_BOOL, OB_PERMISSION_READ_WRITE)) {
+      if (!ldp_enable) {
+        auto laser_enable = device_->getIntProperty(OB_PROP_LASER_BOOL);
+        device_->setBoolProperty(OB_PROP_LDP_BOOL, ldp_enable);
+        std::this_thread::sleep_for(std::chrono::milliseconds(3));
+        device_->setBoolProperty(OB_PROP_LASER_BOOL, laser_enable);
+      } else {
+        device_->setBoolProperty(OB_PROP_LDP_BOOL, ldp_enable);
+      }
+    }
   } catch (const ob::Error& e) {
     ROS_ERROR_STREAM("Failed to set LDP: " << e.getMessage());
     response.message = e.getMessage();
@@ -494,7 +518,7 @@ bool OBCameraNode::getLdpStatusCallback(GetBoolRequest& request, GetBoolResponse
   (void)request;
   std::lock_guard<decltype(device_lock_)> lock(device_lock_);
   try {
-    response.data = device_->getBoolProperty(OB_PROP_LDP_BOOL);
+    response.data = device_->getBoolProperty(OB_PROP_LDP_STATUS_BOOL);
   } catch (const ob::Error& e) {
     ROS_ERROR_STREAM("Failed to get LDP status: " << e.getMessage());
     response.success = false;
@@ -816,5 +840,22 @@ bool OBCameraNode::switchIRDataSourceChannelCallback(SetStringRequest& request,
     return false;
   }
   return false;
+}
+
+bool OBCameraNode::getLaserStatusCallback(GetBoolRequest& request, GetBoolResponse& response) {
+  (void)request;
+  std::lock_guard<decltype(device_lock_)> lock(device_lock_);
+  try {
+    if (device_->isPropertySupported(OB_PROP_LASER_CONTROL_INT, OB_PERMISSION_READ_WRITE)) {
+      response.data = device_->getBoolProperty(OB_PROP_LASER_CONTROL_INT) ? false : true;
+    } else if (device_->isPropertySupported(OB_PROP_LASER_BOOL, OB_PERMISSION_READ_WRITE)) {
+      response.data = device_->getBoolProperty(OB_PROP_LASER_BOOL) ? false : true;
+    }
+  } catch (const ob::Error& e) {
+    ROS_ERROR_STREAM("Failed to get LDP status: " << e.getMessage());
+    response.success = false;
+    return false;
+  }
+  return true;
 }
 }  // namespace orbbec_camera

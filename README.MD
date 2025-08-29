@@ -1,15 +1,135 @@
 # OrbbecSDK ROS
 
-[![stable](http://badges.github.io/stability-badges/dist/stable.svg)](http://github.com/badges/stability-badges) ![version](https://img.shields.io/badge/version-1.5.12-green)
+> [!IMPORTANT]
+>
+> Welcome to the OrbbecSDK ROS Wrapper. Before you begin using this version of ROS wrapper, it's crucial to check the following [device support list ](#supported-devices)to verify the compatibility.
 
-OrbbecSDK_ROS1 is a wrapper for Orbbec SDK that supports ROS Kinetic, Melodic, and Noetic distributions.
-It enables smooth integration of Orbbec 3D cameras into ROS projects.
+OrbbecSDK ROS Wrapper provides seamless integration of Orbbec cameras with ROS environment. It supports ROS Kinetic, Melodic, and Noetic distributions.
 
-With the major update of the new branch [v2-main](https://github.com/orbbec/OrbbecSDK_ROS1/tree/v2-main) in October 2024, OrbbecSDK_ROS1 is connected to the open source version of [OrbbecSDK v2](https://github.com/orbbec/OrbbecSDK_v2/releases), which will make OrbbecSDK_ROS1 more flexible and extensible. This update in v2-main ensures compatibility with all new Orbbec USB products that comply with the UVC standard. However, OrbbecSDK_ROS1 v2 no longer supports Orbbec's traditional OpenNI protocol devices. We encourage you to check whether your device is supported by OrbbecSDK_ROS1 v2 and use the new version if supported.
+With a major update in October 2024, we release the [OrbbecSDK ROS1 Wrapper v2](https://github.com/orbbec/OrbbecSDK_ROS1/tree/v2-main) connected to the open source [OrbbecSDK v2](https://github.com/orbbec/OrbbecSDK_v2/releases) with enhanced flexibility and extensibility. This update ensures compatibility with all Orbbec USB products adhering to UVC standard. However, it no longer supports Orbbec's traditional OpenNI protocol devices. We strongly encourage you to use the v2-main branch if your device is supported.
+
+Here is the device support list of main branch (v1.x) and v2-main branch (v2.x):
+
+<table border="1" style="border-collapse: collapse; text-align: center; width: 100%;">
+  <thead>
+    <tr style="background-color: #1f4e78; color: white; text-align: center;">
+      <th>Product Series</th>
+      <th>Product</th>
+      <th><a href="https://github.com/orbbec/OrbbecSDK_ROS1/tree/main" style="color: black; text-decoration: none;">Branch main</a></th>
+      <th><a href="https://github.com/orbbec/OrbbecSDK_ROS1/tree/v2-main" style="color: black; text-decoration: none;">Branch v2-main</a></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td rowspan="8" style="text-align: center; font-weight: bold;">Gemini 330</td>
+      <td>Gemini 335</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
+    </tr>
+    <tr>
+      <td>Gemini 336</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
+    </tr>
+    <tr>
+      <td>Gemini 330</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
+    </tr>
+    <tr>
+      <td>Gemini 335L</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
+    </tr>
+    <tr>
+      <td>Gemini 336L</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
+    </tr>
+    <tr>
+      <td>Gemini 330L</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
+    </tr>
+    <tr>
+      <td>Gemini 335Lg</td>
+      <td>not supported</td>
+      <td>recommended for new designs</td>
+    </tr>
+    <tr>
+      <td>Gemini 335Le</td>
+      <td>not supported</td>
+      <td>recommended for new designs</td>
+    </tr>
+    <tr>
+      <td rowspan="3" style="text-align: center; font-weight: bold;">Gemini 2</td>
+      <td>Gemini 2</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
+    </tr>
+    <tr>
+      <td>Gemini 2 L</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
+    </tr>
+    <tr>
+      <td>Gemini 2 XL</td>
+      <td>recommended for new designs</td>
+      <td>to be supported</td>
+    </tr>
+    <tr>
+      <td rowspan="3" style="text-align: center; font-weight: bold;">Femto</td>
+      <td>Femto Bolt</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
+    </tr>
+    <tr>
+      <td>Femto Mega</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
+    </tr>
+    <tr>
+      <td>Femto Mega I</td>
+      <td>full maintenance</td>
+      <td>to be supported</td>
+    </tr>
+    <tr>
+      <td rowspan="3" style="text-align: center; font-weight: bold;">Astra</td>
+      <td>Astra 2</td>
+      <td>full maintenance</td>
+      <td>recommended for new designs</td>
+    </tr>
+    <tr>
+      <td>Astra+</td>
+      <td>limited maintenance</td>
+      <td>not supported</td>
+    </tr>
+    <tr>
+      <td>Astra Pro Plus</td>
+      <td>limited maintenance</td>
+      <td>not supported</td>
+    </tr>
+    <tr>
+      <td style="text-align: center; font-weight: bold;">Astra Mini</td>
+      <td>Astra Mini Pro</td>
+      <td>full maintenance</td>
+      <td>not supported</td>
+    </tr>
+  </tbody>
+</table>
+
+**Note**: If you do not find your device, please contact our FAE or sales representative for help.
+
+**Definition**:
+
+1. recommended for new designs: we will provide full supports with new features,  bug fix and performance optimization;
+2. full maintenance: we will provide bug fix support;
+3. limited maintenance: we will provide critical bug fix support;
+4. not supported: we will not support specific device in this version;
+5. to be supported: we will add support in the near future.
 
 ## Table of Contents
 
-<!-- TOC -->
 * [OrbbecSDK ROS](#orbbecsdk-ros)
   * [Table of Contents](#table-of-contents)
   * [Install Dependencies](#install-dependencies)
@@ -37,7 +157,6 @@ With the major update of the new branch [v2-main](https://github.com/orbbec/Orbb
     * [Why Are There So Many Launch Files?](#why-are-there-so-many-launch-files)
   * [Other useful links](#other-useful-links)
   * [License](#license)
-<!-- TOC -->
 
 ## Install Dependencies
 
@@ -52,6 +171,7 @@ With the major update of the new branch [v2-main](https://github.com/orbbec/Orbb
   ```bash
   # Assuming you have sourced the ROS environment, same below
   sudo apt install libgflags-dev ros-$ROS_DISTRO-image-geometry ros-$ROS_DISTRO-camera-info-manager \
+  ros-${ROS_DISTRO}-image-transport-plugins ros-${ROS_DISTRO}-compressed-image-transport \
   ros-$ROS_DISTRO-image-transport ros-$ROS_DISTRO-image-publisher libgoogle-glog-dev libusb-1.0-0-dev libeigen3-dev \
   ros-$ROS_DISTRO-diagnostic-updater ros-$ROS_DISTRO-diagnostic-msgs \
   libdw-dev
@@ -196,7 +316,9 @@ rosservice call /camera/save_point_cloud "{}"
 NOTE: The images are saved under `~/.ros/image` and are only available when the sensor is on.
 
 ## Network camera
+
 For Femto Mega and Femto Mega I, the network camera feature is supported.
+
 ```bash
 roslaunch orbbec_camera femto_mega.launch enumerate_net_device:=true
 ```
@@ -257,8 +379,13 @@ The following launch parameters are available:
   If set to `true`, the camera will send heartbeat messages and generate firmware logs.
 - `enable_hardware_reset`: This option enables the hardware reset function. By default, it is set to `false`.
   If set to `true`, the camera will reboot upon its first connection.
+- `frame_aggregate_mode`:Support full_frame, color_frame, ANY or disable mode
+  `full_frame`:When the frame data of all enabled video stream is valid, the video stream topic data will be output.If the frame data of any video stream is invalid, the frame data of other video streams cannot be output.
+  `color_frame`:When the frame data of the color stream is valid, the video stream topic data will be output,suitable for color using H264, H265 format,ensure that color frames are not dropped, because dropping color frames affects the decoding of H264 and H265.
+  `ANY`:When the frame data of the video stream is valid or invalid, the video stream will be output, but the invalid video stream frame data will be filtered out and output through the topic.
+  `disable`:Disable frame_aggregate_mode, all types of data frames will output independently.Primarily addresses the issue of frame output delay when users configure different frame rates for different video streams
 
-**IMPORTANT**: *Please carefully read the instructions regarding software filtering settings at [this link](https://www.orbbec.com/docs/g330-use-depth-post-processing-blocks/). If you are uncertain, do not modify these settings.*
+**IMPORTANT**: *Pleframe_aggregate_modease carefully read the instructions regarding software filtering settings at [this link](https://www.orbbec.com/docs/g330-use-depth-post-processing-blocks/). If you are uncertain, do not modify these settings.*
 
 ## Depth work mode switch:
 
@@ -390,51 +517,45 @@ cd ~/ros_ws/src/OrbbecSDK_ROS1
 bash .make_deb.sh
 ```
 
-## Launch files
-
-| product serials                     | launch file              |
-| ----------------------------------- | ------------------------ |
-| astra+                              | astra_adv.launch         |
-| astra mini/astra mini pro/astra pro | astra.launch             |
-| astra mini s pro                    | astra.launch             |
-| astra2                              | astra2.launch            |
-| astra stereo s                      | stereo_s_u3.launch       |
-| astra pro2                          | astra_pro2.launch        |
-| dabai                               | dabai.launch             |
-| dabai d1                            | dabai_d1.launch          |
-| dabai dcw                           | dabai_dcw.launch         |
-| dabai dw                            | dabai_dw.launch          |
-| dabai pro                           | dabai_pro.launch         |
-| deeya                               | deeya.launch             |
-| femto / femto w                     | femto.launch             |
-| femto mega / femto mega I           | femto_mega.launch        |
-| femto bolt                          | femto_bolt.launch        |
-| gemini                              | gemini.launch            |
-| gemini2 / dabai DCL                 | gemini2.launch           |
-| gemini2L                            | gemini2L.launch          |
-| gemini e                            | gemini_e.launch          |
-| gemini e lite                       | gemini_e_lite.launch     |
-| dabai max                           | dabai_max.launch         |
-| dabai max pro                       | dabai_max_pro.launch     |
-| gemini uw                           | gemini_uw.launch         |
-| dabai dcw2                          | dabai_dcw2.launch        |
-| dabai dw2                           | dabai_dw2.launch         |
-| gemini ew                           | gemini_ew.launch         |
-| gemini ew lite                      | gemini_ew_lite.launch    |
-| gemini 330 series                   | gemini_330_series.launch |
-
-**All launch files are essentially similar, with the primary difference being the default values of the parameters set for different models
-within the same series. Differences in USB standards, such as USB 2.0 versus USB 3.0, may require adjustments to these parameters. If you
-encounter a startup failure, please carefully review the specification manual. Pay special attention to the resolution settings in the launch
-file, as well as other parameters, to ensure compatibility and optimal performance.**
-
 ## Use Nodelet
 
 For users who need to use nodelet, please refer to `gemini2_nodelet.launch`
 
-## Supported hardware products
+## Supported Devices
 
-Please refer to the OrbbecSDK supported products: [Product Support](https://github.com/orbbec/OrbbecSDK?tab=readme-ov-file#product-support)
+The following devices are supported by the OrbbecSDK ROS1 Wrapper.
+
+| Product          | **Minimal Firmware Version** | launch file              |
+| ---------------- | ---------------------------------- | ------------------------ |
+| Gemini 330       | 1.2.20                             | gemini_330_series.launch |
+| Gemini 330L      | 1.2.20                             | gemini_330_series.launch |
+| Gemini 335       | 1.2.20                             | gemini_330_series.launch |
+| Gemini 335L      | 1.2.20                             | gemini_330_series.launch |
+| Gemini 336       | 1.2.20                             | gemini_330_series.launch |
+| Gemini 336L      | 1.2.20                             | gemini_330_series.launch |
+| Femto Bolt       | 1.0.6                              | femto_bolt.launch        |
+| Femto Mega       | 1.1.7                              | femto_mega.launch        |
+| Gemini 2 XL      | Obox: V1.2.5 VL:1.4.54             | gemini2XL.launch         |
+| Astra 2          | 2.8.20                             | astra2.launch            |
+| Gemini 2 L       | 1.4.32                             | gemini2L.launch          |
+| Gemini 2         | 1.4.60                             | gemini2.launch           |
+| Astra+           | 1.0.19                             | astra_adv.launch         |
+| Femto            | 1.6.7                              | femto.launch             |
+| DaBai            | 2436                               | dabai.launch             |
+| DaBai DCW        | 2460                               | dabai_dcw.launch         |
+| DaBai DW         | 2606                               | dabai_dw.launch          |
+| Astra Mini Pro   | 1007                               | astra.launch             |
+| Gemini E         | 3460                               | gemini_e.launch          |
+| Gemini E Lite    | 3606                               | gemini_e_lite.launch     |
+| Gemini           | 3018                               | gemini.launch            |
+| Astra Mini S Pro | 1005                               | astra.launch             |
+
+> [!IMPORTANT]
+>
+> We recommend using the [OrbbecSDK ROS1 Wrapper v2](https://github.com/orbbec/OrbbecSDK_ROS1/tree/v2-main) to get better flexibility and extensibility for the following devices: Astra 2, Femto Mega, Femto Bolt, Gemini 2, Gemini 2 L, Gemini 335, Gemini 335L, Gemini 336, Gemini 336L, Gemini 335Lg(only supported in v2-main branch).
+
+All launch files are essentially similar, with the primary difference being the default values of the parameters set
+for different models within the same series. Differences in USB standards, such as USB 2.0 versus USB 3.0, may require adjustments to these parameters. If you encounter a startup failure, please carefully review the specification manual. Pay special attention to the resolution settings in the launch file, as well as other parameters, to ensure compatibility and optimal performance.
 
 ## Frequently Asked Questions
 

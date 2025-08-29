@@ -146,7 +146,8 @@ void OBCameraNode::getParameters() {
   }
   depth_aligned_frame_id_[DEPTH] = optical_frame_id_[COLOR];
 
-  use_hardware_time_ = nh_private_.param<bool>("use_hardware_time", true);
+  accel_gyro_frame_id_ = camera_name_ + "_accel_gyro_optical_frame";
+
   publish_tf_ = nh_private_.param<bool>("publish_tf", false);
   depth_registration_ = nh_private_.param<bool>("depth_registration", false);
   enable_frame_sync_ = nh_private_.param<bool>("enable_frame_sync", false);
@@ -159,8 +160,11 @@ void OBCameraNode::getParameters() {
   enable_hardware_d2d_ = nh_private_.param<bool>("enable_hardware_d2d", true);
   depth_work_mode_ = nh_private_.param<std::string>("depth_work_mode", "");
   enable_soft_filter_ = nh_private_.param<bool>("enable_soft_filter", true);
+  color_rotation_ = nh_private_.param<int>("color_rotation", -1);
+  depth_rotation_ = nh_private_.param<int>("depth_rotation", -1);
+  left_ir_rotation_ = nh_private_.param<int>("left_ir_rotation", -1);
+  right_ir_rotation_ = nh_private_.param<int>("right_ir_rotation", -1);
   enable_color_auto_exposure_ = nh_private_.param<bool>("enable_color_auto_exposure", true);
-  color_exposure_ = nh_private_.param<int>("color_exposure_", -1);
   enable_ir_auto_exposure_ = nh_private_.param<bool>("enable_ir_auto_exposure", true);
   ir_exposure_ = nh_private_.param<int>("ir_exposure_", -1);
   enable_ir_long_exposure_ = nh_private_.param<bool>("enable_ir_long_exposure", false);
@@ -244,6 +248,7 @@ void OBCameraNode::getParameters() {
       nh_private_.param<bool>("retry_on_usb3_detection_failure", false);
   laser_energy_level_ = nh_private_.param<int>("laser_energy_level", -1);
   enable_ldp_ = nh_private_.param<bool>("enable_ldp", true);
+  industry_mode_ = nh_private_.param<std::string>("industry_mode", "");
   tf_publish_rate_ = nh_private_.param<double>("tf_publish_rate", 0.0);
   enable_heartbeat_ = nh_private_.param<bool>("enable_heartbeat", false);
   enable_color_auto_white_balance_ =
@@ -260,11 +265,31 @@ void OBCameraNode::getParameters() {
   color_hue_ = nh_private_.param<int>("color_hue", -1);
   ir_gain_ = nh_private_.param<int>("ir_gain", -1);
   ir_ae_max_exposure_ = nh_private_.param<int>("ir_ae_max_exposure", -1);
+  time_domain_ = nh_private_.param<std::string>("time_domain", "global");
+  color_backlight_compensation_ = nh_private_.param<int>("color_backlight_compensation", -1);
+  frame_aggregate_mode_ = nh_private_.param<std::string>("frame_aggregate_mode", "ANY");
   auto device_info = device_->getDeviceInfo();
-  CHECK_NOTNULL(device_info);
-  if (isOpenNIDevice(device_info->pid())) {
-    use_hardware_time_ = false;
+  CHECK_NOTNULL(device_info.get());
+  auto pid = device_info->pid();
+  if (isOpenNIDevice(pid)) {
+    time_domain_ = "system";
   }
+  ROS_INFO_STREAM("current time domain:" << time_domain_);
+
+  enable_sync_host_time_ = nh_private_.param<bool>("enable_sync_host_time", "global");
+  ROS_INFO_STREAM("enable_sync_host_time:" << enable_sync_host_time_);
+  if (enable_sync_host_time_ && !isOpenNIDevice(device_info_->pid())) {
+    device_->timerSyncWithHost();
+    if (time_domain_ == "device") {
+      sync_host_time_timer_ =
+          nh_private_.createTimer(ros::Duration(1800.0), [this](const ros::TimerEvent&) {
+            if (device_) {
+              device_->timerSyncWithHost();
+            }
+          });
+    }
+  }
+
   // AE roi
   color_ae_roi_top_ = nh_private_.param<int>("color_ae_roi_top", -1);
   color_ae_roi_bottom_ = nh_private_.param<int>("color_ae_roi_bottom", -1);
@@ -565,7 +590,7 @@ void OBCameraNode::publishPointCloud(const std::shared_ptr<ob::FrameSet>& frame_
       }
     }
 
-    if (depth_frame_) {
+    if (frame_set->depthFrame() != nullptr) {
       publishDepthPointCloud(frame_set);
     }
   } catch (const ob::Error& e) {
@@ -585,7 +610,7 @@ void OBCameraNode::publishDepthPointCloud(const std::shared_ptr<ob::FrameSet>& f
     return;
   }
   std::lock_guard<decltype(cloud_mutex_)> cloud_lock(cloud_mutex_);
-  auto depth_frame = depth_frame_->as<ob::DepthFrame>();
+  auto depth_frame = frame_set->depthFrame();
   if (!depth_frame) {
     ROS_ERROR_STREAM("depth frame is null");
     return;
@@ -645,8 +670,8 @@ void OBCameraNode::publishDepthPointCloud(const std::shared_ptr<ob::FrameSet>& f
     cloud_msg_.height = 400;
     modifier.resize(valid_count);
   }
-  auto timestamp = use_hardware_time_ ? fromUsToROSTime(depth_frame->timeStampUs())
-                                      : fromUsToROSTime(depth_frame->systemTimeStampUs());
+  auto frame_timestamp = getFrameTimestampUs(depth_frame);
+  auto timestamp = fromUsToROSTime(frame_timestamp);
   std::string frame_id = depth_registration_ ? optical_frame_id_[COLOR] : optical_frame_id_[DEPTH];
   cloud_msg_.header.stamp = timestamp;
   cloud_msg_.header.frame_id = frame_id;
@@ -681,7 +706,7 @@ void OBCameraNode::publishColoredPointCloud(const std::shared_ptr<ob::FrameSet>&
   }
   CHECK_NOTNULL(depth_frame_.get());
   std::lock_guard<decltype(cloud_mutex_)> cloud_lock(cloud_mutex_);
-  auto depth_frame = depth_frame_->as<ob::DepthFrame>();
+  auto depth_frame = frame_set->depthFrame();
   auto color_frame = frame_set->colorFrame();
   if (!depth_frame || !color_frame) {
     return;
@@ -770,8 +795,8 @@ void OBCameraNode::publishColoredPointCloud(const std::shared_ptr<ob::FrameSet>&
     cloud_msg_.height = 400;
     modifier.resize(valid_count);
   }
-  auto timestamp = use_hardware_time_ ? fromUsToROSTime(depth_frame->timeStampUs())
-                                      : fromUsToROSTime(depth_frame->systemTimeStampUs());
+  auto frame_timestamp = getFrameTimestampUs(depth_frame);
+  auto timestamp = fromUsToROSTime(frame_timestamp);
   cloud_msg_.header.stamp = timestamp;
   cloud_msg_.header.frame_id = optical_frame_id_[COLOR];
   depth_registered_cloud_pub_.publish(cloud_msg_);
@@ -894,26 +919,34 @@ void OBCameraNode::onNewIMUFrameSyncOutputCallback(const std::shared_ptr<ob::Fra
   auto imu_msg = sensor_msgs::Imu();
   setDefaultIMUMessage(imu_msg);
 
-  imu_msg.header.frame_id = imu_optical_frame_id_;
-  auto timestamp = use_hardware_time_ ? fromUsToROSTime(accel_frame->timeStampUs())
-                                      : fromUsToROSTime(accel_frame->systemTimeStampUs());
+  imu_msg.header.frame_id = optical_frame_id_[GYRO];
+  auto frame_timestamp = getFrameTimestampUs(accel_frame);
+  auto timestamp = fromUsToROSTime(frame_timestamp);
   imu_msg.header.stamp = timestamp;
-  auto gyro_cast_frame = gyro_frame->as<ob::GyroFrame>();
+
   auto gyro_info = createIMUInfo(GYRO);
   gyro_info.header = imu_msg.header;
-  gyro_info.header.frame_id = imu_optical_frame_id_;
   imu_info_publishers_[GYRO].publish(gyro_info);
+
+  auto accel_info = createIMUInfo(ACCEL);
+  imu_msg.header.frame_id = optical_frame_id_[ACCEL];
+  accel_info.header = imu_msg.header;
+  imu_info_publishers_[ACCEL].publish(accel_info);
+
+  imu_msg.header.frame_id = accel_gyro_frame_id_;
+
+  auto gyro_cast_frame = gyro_frame->as<ob::GyroFrame>();
   auto gyroData = gyro_cast_frame->value();
   imu_msg.angular_velocity.x = gyroData.x - gyro_info.bias[0];
   imu_msg.angular_velocity.y = gyroData.y - gyro_info.bias[1];
   imu_msg.angular_velocity.z = gyroData.z - gyro_info.bias[2];
+
   auto accel_cast_frame = accel_frame->as<ob::AccelFrame>();
   auto accelData = accel_cast_frame->value();
-  auto accel_info = createIMUInfo(ACCEL);
   imu_msg.linear_acceleration.x = accelData.x - accel_info.bias[0];
   imu_msg.linear_acceleration.y = accelData.y - accel_info.bias[1];
   imu_msg.linear_acceleration.z = accelData.z - accel_info.bias[2];
-  imu_info_publishers_[ACCEL].publish(accel_info);
+
   imu_gyro_accel_publisher_.publish(imu_msg);
 }
 
@@ -937,13 +970,14 @@ void OBCameraNode::onNewIMUFrameCallback(const std::shared_ptr<ob::Frame>& frame
   auto imu_msg = sensor_msgs::Imu();
   setDefaultIMUMessage(imu_msg);
   imu_msg.header.frame_id = optical_frame_id_[stream_index];
-  auto timestamp = use_hardware_time_ ? fromUsToROSTime(frame->timeStampUs())
-                                      : fromUsToROSTime(frame->systemTimeStampUs());
+  auto frame_timestamp = getFrameTimestampUs(frame);
+  auto timestamp = fromUsToROSTime(frame_timestamp);
   imu_msg.header.stamp = timestamp;
+
   auto imu_info = createIMUInfo(stream_index);
   imu_info.header = imu_msg.header;
-  imu_info.header.frame_id = imu_optical_frame_id_;
   imu_info_publishers_[stream_index].publish(imu_info);
+
   if (frame->type() == OB_FRAME_GYRO) {
     auto gyro_frame = frame->as<ob::GyroFrame>();
     auto data = gyro_frame->value();
@@ -1069,6 +1103,20 @@ std::shared_ptr<ob::Frame> OBCameraNode::processDepthFrameFilter(
   return frame;
 }
 
+uint64_t OBCameraNode::getFrameTimestampUs(const std::shared_ptr<ob::Frame>& frame) {
+  if (frame == nullptr) {
+    ROS_WARN_STREAM("getFrameTimestampUs: frame is nullptr, return 0");
+    return 0;
+  }
+  if (time_domain_ == "device") {
+    return frame->timeStampUs();
+  } else if (time_domain_ == "global") {
+    return frame->globalTimeStampUs();
+  } else {
+    return frame->systemTimeStampUs();
+  }
+}
+
 void OBCameraNode::onNewFrameSetCallback(const std::shared_ptr<ob::FrameSet>& frame_set) {
   if (!is_running_) {
     ROS_WARN_ONCE("Frame callback called before initialization");
@@ -1089,14 +1137,12 @@ void OBCameraNode::onNewFrameSetCallback(const std::shared_ptr<ob::FrameSet>& fr
     has_first_color_frame_ = has_first_color_frame_ || (enable_stream_[COLOR] && color_frame);
     if (isGemini335PID(device_info_->pid()) && enable_stream_[DEPTH]) {
       depth_frame_ = processDepthFrameFilter(depth_frame_);
-      bool align_success = false;
       if (depth_registration_ && align_filter_ && depth_frame_ && has_first_color_frame_) {
         auto new_frame = align_filter_->process(frame_set);
         if (new_frame) {
           auto new_frame_set = new_frame->as<ob::FrameSet>();
           if (new_frame_set) {
             depth_frame_ = new_frame_set->getFrame(OB_FRAME_DEPTH);
-            align_success = true;
           } else {
             ROS_ERROR_STREAM("cast to FrameSet failed");
             return;
@@ -1105,13 +1151,6 @@ void OBCameraNode::onNewFrameSetCallback(const std::shared_ptr<ob::FrameSet>& fr
           ROS_ERROR_STREAM("Depth frame alignment failed");
           return;
         }
-      }
-      // check if align filter failed, if so, return
-      if (depth_registration_ && !align_success) {
-        ROS_INFO_STREAM_THROTTLE(
-            1.0,
-            "Depth frame alignment failed, maybe color frame is not ready, drop the frame set");
-        return;
       }
     }
     if (enable_stream_[COLOR] && color_frame) {
@@ -1231,8 +1270,8 @@ void OBCameraNode::onNewFrameCallback(std::shared_ptr<ob::Frame> frame,
   }
   int width = static_cast<int>(video_frame->width());
   int height = static_cast<int>(video_frame->height());
-  auto timestamp = use_hardware_time_ ? fromUsToROSTime(video_frame->timeStampUs())
-                                      : fromUsToROSTime(video_frame->systemTimeStampUs());
+  auto frame_timestamp = getFrameTimestampUs(frame);
+  auto timestamp = fromUsToROSTime(frame_timestamp);
   std::string frame_id = (depth_registration_ && stream_index == DEPTH)
                              ? depth_aligned_frame_id_[stream_index]
                              : optical_frame_id_[stream_index];
@@ -1322,6 +1361,22 @@ void OBCameraNode::onNewFrameCallback(std::shared_ptr<ob::Frame> frame,
   if (stream_index == DEPTH) {
     auto depth_scale = video_frame->as<ob::DepthFrame>()->getValueScale();
     image = image * depth_scale;
+
+    // auto current_time_stamp_ms = timestamp.toNSec() / 1000000;
+    // ROS_WARN_STREAM("current_time_stamp_ms: " << current_time_stamp_ms);
+
+    // auto device_timestamp_ms = frame->timeStampUs() / 1000;
+    // auto global_timestamp_ms = frame->globalTimeStampUs() / 1000;
+    // auto system_timestamp_ms = frame->systemTimeStampUs() / 1000;
+    // ROS_WARN_STREAM("device_timestamp_ms: " << device_timestamp_ms
+    //                                         << " global_timestamp_ms: " << global_timestamp_ms
+    //                                         << " system_timestamp_ms: " << system_timestamp_ms);
+
+    // int64_t diff_device = device_timestamp_ms - current_time_stamp_ms;
+    // int64_t diff_global = system_timestamp_ms - current_time_stamp_ms;
+    // ROS_WARN_STREAM("device_timestamp_ms - current_time_stamp_ms: "
+    //                 << diff_device
+    //                 << " system_timestamp_ms - current_time_stamp_ms: " << diff_global);
   }
   auto image_publisher = image_publishers_[stream_index];
   auto image_msg =

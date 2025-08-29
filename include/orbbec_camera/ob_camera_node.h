@@ -128,6 +128,8 @@ class OBCameraNode {
 
   std::shared_ptr<ob::Frame> processDepthFrameFilter(std::shared_ptr<ob::Frame> &frame);
 
+  uint64_t getFrameTimestampUs(const std::shared_ptr<ob::Frame> &frame);
+
   void onNewColorFrameCallback();
 
   void publishPointCloud(const std::shared_ptr<ob::FrameSet> &frame_set);
@@ -301,6 +303,8 @@ class OBCameraNode {
 
   bool switchIRDataSourceChannelCallback(SetStringRequest &request, SetStringResponse &response);
 
+  bool getLaserStatusCallback(GetBoolRequest &request, GetBoolResponse &response);
+
  private:
   ros::NodeHandle nh_;
   ros::NodeHandle nh_private_;
@@ -349,7 +353,7 @@ class OBCameraNode {
   int default_white_balance_ = 0;
   std::string camera_link_frame_id_ = "camera_link";
   std::string camera_name_ = "camera";
-  const std::string imu_optical_frame_id_ = "camera_gyro_optical_frame";
+  std::string accel_gyro_frame_id_ = "camera_accel_gyro_optical_frame";
   const std::string imu_frame_id_ = "camera_gyro_frame";
   std::map<stream_index_pair, ros::ServiceServer> get_exposure_srv_;
   std::map<stream_index_pair, ros::ServiceServer> set_exposure_srv_;
@@ -382,6 +386,7 @@ class OBCameraNode {
   ros::ServiceServer switch_ir_mode_srv_;
   ros::ServiceServer switch_ir_data_source_channel_srv_;
   ros::ServiceServer get_ldp_measure_distance_srv_;
+  ros::ServiceServer get_laser_status_srv_;
 
   bool publish_tf_ = true;
   std::shared_ptr<tf2_ros::StaticTransformBroadcaster> static_tf_broadcaster_ = nullptr;
@@ -414,6 +419,10 @@ class OBCameraNode {
   boost::optional<OBCameraParam> camera_params_;
   bool is_initialized_ = false;
   bool enable_soft_filter_ = true;
+  int color_rotation_ = -1;
+  int depth_rotation_ = -1;
+  int left_ir_rotation_ = -1;
+  int right_ir_rotation_ = -1;
   bool enable_color_auto_exposure_ = true;
   bool enable_color_auto_white_balance_ = true;
   int color_exposure_ = -1;
@@ -476,7 +485,6 @@ class OBCameraNode {
   std::shared_ptr<std::thread> colorFrameThread_ = nullptr;
   std::mutex colorFrameMtx_;
   std::condition_variable colorFrameCV_;
-  bool use_hardware_time_ = false;
   // ordered point cloud
   bool ordered_pc_ = false;
   std::shared_ptr<ob::Frame> depth_frame_ = nullptr;
@@ -522,6 +530,7 @@ class OBCameraNode {
   bool enable_color_hdr_ = false;
   int laser_energy_level_ = -1;
   bool enable_ldp_ = true;
+  std::string industry_mode_ = "";
   ob::PointCloudFilter depth_point_cloud_filter_;
   boost::optional<OBCalibrationParam> calibration_param_;
   boost::optional<OBXYTables> xy_tables_;
@@ -534,6 +543,9 @@ class OBCameraNode {
   bool has_first_color_frame_ = false;
   // rotation degree
   std::map<stream_index_pair, int> image_rotation_;
+  std::string time_domain_ = "global";
+  bool enable_sync_host_time_ = true;
+  ros::Timer sync_host_time_timer_;
   // AE ROI
   int color_ae_roi_left_ = -1;
   int color_ae_roi_right_ = -1;
@@ -543,6 +555,8 @@ class OBCameraNode {
   int depth_ae_roi_right_ = -1;
   int depth_ae_roi_top_ = -1;
   int depth_ae_roi_bottom_ = -1;
+  int color_backlight_compensation_ = -1;
+  std::string frame_aggregate_mode_;
 };
 
 }  // namespace orbbec_camera

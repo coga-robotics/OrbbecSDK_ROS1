@@ -267,6 +267,12 @@ void OBCameraNode::setupDevices() {
         device_->isPropertySupported(OB_PROP_COLOR_HUE_INT, OB_PERMISSION_READ_WRITE)) {
       device_->setIntProperty(OB_PROP_COLOR_HUE_INT, color_hue_);
     }
+    if (color_backlight_compensation_ != -1 &&
+        device_->isPropertySupported(OB_PROP_COLOR_BACKLIGHT_COMPENSATION_INT,
+                                     OB_PERMISSION_READ_WRITE)) {
+      device_->setIntProperty(OB_PROP_COLOR_BACKLIGHT_COMPENSATION_INT,
+                              color_backlight_compensation_);
+    }
     if (ir_gain_ != -1 &&
         device_->isPropertySupported(OB_PROP_IR_GAIN_INT, OB_PERMISSION_READ_WRITE)) {
       device_->setIntProperty(OB_PROP_IR_GAIN_INT, ir_gain_);
@@ -329,7 +335,44 @@ void OBCameraNode::setupDevices() {
     }
     if (device_->isPropertySupported(OB_PROP_LDP_BOOL, OB_PERMISSION_READ_WRITE)) {
       ROS_INFO_STREAM("Setting LDP to " << (enable_ldp_ ? "true" : "false"));
-      device_->setBoolProperty(OB_PROP_LDP_BOOL, enable_ldp_);
+      if (device_->isPropertySupported(OB_PROP_LASER_CONTROL_INT, OB_PERMISSION_READ_WRITE)) {
+        auto laser_enable = device_->getIntProperty(OB_PROP_LASER_CONTROL_INT);
+        device_->setBoolProperty(OB_PROP_LDP_BOOL, enable_ldp_);
+        device_->setIntProperty(OB_PROP_LASER_CONTROL_INT, laser_enable);
+      } else if (device_->isPropertySupported(OB_PROP_LASER_BOOL, OB_PERMISSION_READ_WRITE)) {
+        if (!enable_ldp_) {
+          auto laser_enable = device_->getIntProperty(OB_PROP_LASER_BOOL);
+          device_->setBoolProperty(OB_PROP_LDP_BOOL, enable_ldp_);
+          std::this_thread::sleep_for(std::chrono::milliseconds(3));
+          device_->setIntProperty(OB_PROP_LASER_BOOL, laser_enable);
+        } else {
+          device_->setBoolProperty(OB_PROP_LDP_BOOL, enable_ldp_);
+        }
+      }
+    }
+    if (!industry_mode_.empty() &&
+        device_->isPropertySupported(OB_PROP_DEPTH_INDUSTRY_MODE_INT, OB_PERMISSION_READ_WRITE)) {
+      if (industry_mode_ == "default") {
+        OBDepthIndustryMode mode = OB_INDUSTRY_DEFAULT;
+        device_->setIntProperty(OB_PROP_DEPTH_INDUSTRY_MODE_INT, (int32_t)mode);
+      } else if (industry_mode_ == "mode1") {
+        OBDepthIndustryMode mode = OB_INDUSTRY_MODE1;
+        device_->setIntProperty(OB_PROP_DEPTH_INDUSTRY_MODE_INT, (int32_t)mode);
+      } else if (industry_mode_ == "mode2") {
+        OBDepthIndustryMode mode = OB_INDUSTRY_MODE2;
+        device_->setIntProperty(OB_PROP_DEPTH_INDUSTRY_MODE_INT, (int32_t)mode);
+      } else if (industry_mode_ == "mode3") {
+        OBDepthIndustryMode mode = OB_INDUSTRY_MODE3;
+        device_->setIntProperty(OB_PROP_DEPTH_INDUSTRY_MODE_INT, (int32_t)mode);
+      } else if (industry_mode_ == "mode4") {
+        OBDepthIndustryMode mode = OB_INDUSTRY_MODE4;
+        device_->setIntProperty(OB_PROP_DEPTH_INDUSTRY_MODE_INT, (int32_t)mode);
+      } else if (industry_mode_ == "mode5") {
+        OBDepthIndustryMode mode = OB_INDUSTRY_MODE5;
+        device_->setIntProperty(OB_PROP_DEPTH_INDUSTRY_MODE_INT, (int32_t)mode);
+      }
+      ROS_INFO_STREAM("Setting industry mode to "
+                      << device_->getIntProperty(OB_PROP_DEPTH_INDUSTRY_MODE_INT));
     }
     if (device_->isPropertySupported(OB_PROP_DEPTH_MAX_SPECKLE_SIZE_INT, OB_PERMISSION_WRITE)) {
       auto default_soft_filter_speckle_size =
@@ -380,7 +423,30 @@ void OBCameraNode::setupDevices() {
       sync_config = device_->getMultiDeviceSyncConfig();
       ROS_INFO_STREAM("set sync mode to " << sync_config.syncMode);
     }
-
+    if (color_rotation_ != -1 &&
+        device_->isPropertySupported(OB_PROP_COLOR_ROTATE_INT, OB_PERMISSION_READ_WRITE)) {
+      device_->setIntProperty(OB_PROP_COLOR_ROTATE_INT, color_rotation_);
+      ROS_INFO_STREAM("set color rotation  to "
+                      << device_->getIntProperty(OB_PROP_COLOR_ROTATE_INT));
+    }
+    if (depth_rotation_ != -1 &&
+        device_->isPropertySupported(OB_PROP_DEPTH_ROTATE_INT, OB_PERMISSION_READ_WRITE)) {
+      device_->setIntProperty(OB_PROP_DEPTH_ROTATE_INT, depth_rotation_);
+      ROS_INFO_STREAM("set depth rotation  to "
+                      << device_->getIntProperty(OB_PROP_DEPTH_ROTATE_INT));
+    }
+    if (left_ir_rotation_ != -1 &&
+        device_->isPropertySupported(OB_PROP_IR_ROTATE_INT, OB_PERMISSION_READ_WRITE)) {
+      device_->setIntProperty(OB_PROP_IR_ROTATE_INT, left_ir_rotation_);
+      ROS_INFO_STREAM("set left ir rotation  to "
+                      << device_->getIntProperty(OB_PROP_IR_ROTATE_INT));
+    }
+    if (right_ir_rotation_ != -1 &&
+        device_->isPropertySupported(OB_PROP_IR_RIGHT_ROTATE_INT, OB_PERMISSION_READ_WRITE)) {
+      device_->setIntProperty(OB_PROP_IR_RIGHT_ROTATE_INT, right_ir_rotation_);
+      ROS_INFO_STREAM("set right ir rotation  to "
+                      << device_->getIntProperty(OB_PROP_IR_RIGHT_ROTATE_INT));
+    }
     if (device_->isPropertySupported(OB_PROP_DEPTH_AUTO_EXPOSURE_BOOL, OB_PERMISSION_READ_WRITE)) {
       device_->setBoolProperty(OB_PROP_DEPTH_AUTO_EXPOSURE_BOOL, enable_ir_auto_exposure_);
     }
@@ -397,6 +463,9 @@ void OBCameraNode::setupDevices() {
     }
     if (device_->isPropertySupported(OB_PROP_LASER_CONTROL_INT, OB_PERMISSION_READ_WRITE)) {
       device_->setIntProperty(OB_PROP_LASER_CONTROL_INT, enable_laser_);
+    }
+    if (device_->isPropertySupported(OB_PROP_LASER_BOOL, OB_PERMISSION_READ_WRITE)) {
+      device_->setBoolProperty(OB_PROP_LASER_BOOL, enable_laser_);
     }
     if (device_->isPropertySupported(OB_PROP_LASER_ON_OFF_MODE_INT, OB_PERMISSION_READ_WRITE)) {
       device_->setIntProperty(OB_PROP_LASER_ON_OFF_MODE_INT, laser_on_off_mode_);
@@ -797,6 +866,7 @@ void OBCameraNode::setupPipelineConfig() {
     pipeline_config_.reset();
   }
   pipeline_config_ = std::make_shared<ob::Config>();
+
   auto pid = device_info_->pid();
   if (!isGemini335PID(pid) && depth_registration_ && enable_stream_[COLOR] &&
       enable_stream_[DEPTH]) {
@@ -809,6 +879,15 @@ void OBCameraNode::setupPipelineConfig() {
     if (enable_stream_[stream_index]) {
       pipeline_config_->enableStream(stream_profile_[stream_index]);
     }
+  }
+  if (frame_aggregate_mode_ == "full_frame") {
+    pipeline_config_->setFrameAggregateOutputMode(OB_FRAME_AGGREGATE_OUTPUT_FULL_FRAME_REQUIRE);
+  } else if (frame_aggregate_mode_ == "color_frame") {
+    pipeline_config_->setFrameAggregateOutputMode(OB_FRAME_AGGREGATE_OUTPUT_COLOR_FRAME_REQUIRE);
+  } else if (frame_aggregate_mode_ == "disable") {
+    pipeline_config_->setFrameAggregateOutputMode(OB_FRAME_AGGREGATE_OUTPUT_DISABLE);
+  } else {
+    pipeline_config_->setFrameAggregateOutputMode(OB_FRAME_AGGREGATE_OUTPUT_ANY_SITUATION);
   }
 }
 
