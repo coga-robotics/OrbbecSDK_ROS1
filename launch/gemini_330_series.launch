@@ -141,8 +141,11 @@
     <arg name="enable_heartbeat" default="false"/>
     <arg name="enable_hardware_reset" default="false"/>
 
+    <!-- Output: screen, log -->
+    <arg name="output" default="screen" />
+
     <group ns="$(arg camera_name)">
-        <node name="camera" pkg="orbbec_camera" type="orbbec_camera_node" respawn="true">
+        <node name="camera" pkg="orbbec_camera" type="orbbec_camera_node" respawn="true" output="$(arg output)">
             <!-- Use the parameters defined above -->
             <param name="camera_name" value="$(arg camera_name)"/>
             <param name="connection_delay" value="$(arg connection_delay)"/>
